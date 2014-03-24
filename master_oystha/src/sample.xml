@@ -1,0 +1,94 @@
+<!--
+Tag names are equal to valid commands.
+If a command from the default camera is not implemented on the used camera set value to NULL.
+Commands for the chip MUST begin with AT, all other commands are forwarded to the camera.
+Write to chip by commands like e.g. elm_checkSync.
+-->
+<root>
+	<!--Commands for camera, if tag is unused value from default camera is used.-->
+	<camera model="default">
+		<mode>1805</mode>
+		<enter>1816</enter>
+		<powerOff>182A</powerOff>
+		<photoWrite>182B</photoWrite>
+		<eject>182C</eject>
+		<main>182E</main>
+		<stop>1830</stop>
+		<pause>1832</pause>
+		<startStop>1833</startStop>
+		<play>1834</play>
+		<rew>1836</rew>
+		<fwd>1838</fwd>
+		<photoCapture>1839</photoCapture>
+		<record>183A</record>
+		<still>1840</still>
+		<x>
+			<tenth>1844</tenth><!--x1/10-->
+			<fifth>1846</fifth><!--x1/5-->
+			<two>1828</two><!--x2-->
+			<nine>184C</nine><!--x9-->
+			<fourteen>184A</fourteen><!--x14-->
+		</x>
+		<execute>18A2</execute>
+		<menu>
+			<menu>189A</menu>
+			<up>1884</up>
+			<down>1886</down>
+			<right>18C2</right>
+			<left>18C4</left>
+		</menu>
+		<!--Variable speed zoom Tele: 0 slowest, 7 fastest.-->
+		<zoomTele0>2800</zoomTele0>
+		<zoomTele1>2802</zoomTele1>
+		<zoomTele2>2804</zoomTele2>
+		<zoomTele3>2806</zoomTele3>
+		<zoomTele4>2808</zoomTele4>
+		<zoomTele5>280A</zoomTele5>
+		<zoomTele6>280C</zoomTele6>
+		<zoomTele7>280E</zoomTele7>
+		<!--Variable speed zoom Wide: 0 slowest, 7 fastest.-->
+		<zoomWide0>2810</zoomWide0>
+		<zoomWide1>2812</zoomWide1>
+		<zoomWide2>2814</zoomWide2>
+		<zoomWide3>2816</zoomWide3>
+		<zoomWide4>2818</zoomWide4>
+		<zoomWide5>281A</zoomWide5>
+		<zoomWide6>281C</zoomWide6>
+		<zoomWide7>281E</zoomWide7>
+	</camera>
+	<camera model="Sony 3CCD">
+		<play>1834</play>
+		<stop>1830</stop>
+		<record>1833</record>
+	</camera>
+	<camera model="Sony miniDV">
+		<play>FFFF</play>
+		<stop>BBBB</stop>
+		<record>CCCC</record>
+		<pause>NULL</pause>
+	</camera>
+	<!--Commands for ELM chips-->
+	<elm type="624">
+		<useVersionTwo>AT2D</useVersionTwo>
+		<sendAll>ATC0</sendAll>
+		<sendOnlyChanges>ATC1</sendOnlyChanges>
+		<checkSync>ATCS</checkSync>
+		<setDefaults>ATD</setDefaults>
+		<duplicateOff>ATD0</duplicateOff>
+		<duplicateOn>ATD1</duplicateOn>
+		<echoOff>ATE0</echoOff>
+		<echoOn>ATE1</echoOn>
+		<sendFormatedData>ATFD</sendFormatedData>
+		<identify>ATI</identify>
+		<linefeedOff>ATL0</linefeedOff>
+		<linefeedOn>ATL1</linefeedOn>
+		<monitorAllMessages>ATMA</monitorAllMessages>
+		<quietOff>ATQ0</quietOff>
+		<quietOn>ATQ1</quietOn>
+		<sendRawData>ATRD</sendRawData>
+		<repeatCommand>ATR5</repeatCommand><!--ATRn, exchange n with desired number of repeats (0 to F).-->
+		<sendPulse>ATSP</sendPulse>
+		<triggerPulseOnWord>ATTP0</triggerPulseOnWord><!--ATTPn, exchange n with desired word (0 to 7).-->
+		<resetAll>ATZ</resetAll>
+	</elm>
+</root>

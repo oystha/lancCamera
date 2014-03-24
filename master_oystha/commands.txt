@@ -1,0 +1,11 @@
+/////////////////////////////
+//Commands for LANC camcorder
+/////////////////////////////
+//Lines starting with '//' will be ignored
+//Model name
+SONY HDV 1080i/MiniDV
+
+//Play
+1834
+//Stop
+1830
