@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <sstream>
 
 
@@ -28,32 +29,43 @@ int finish_with_error(MYSQL *con){
 	return -1;
 }
 
-int initDB(MYSQL **con, string user, string password, string dataBase, string table){
+int initDB(MYSQL **con, SQL_options_t* SQL){
 	string query;
 	*con = mysql_init(NULL);
 	if(*con == NULL){
 		return finish_with_error(*con);
 	}
-	if(mysql_real_connect(*con, "localhost", user.c_str(), password.c_str(), dataBase.c_str(), 0, NULL, 0) == NULL){
-		query = "CREATE DATABASE " + dataBase;
+	if(mysql_real_connect(*con, SQL->host.c_str(), SQL->username.c_str(), SQL->password.c_str(), SQL->dataBase.c_str(), 0, NULL, 0) == NULL){
+		if(strncmp(mysql_error(*con), "Unknown database", 16) != 0) {
+			return finish_with_error(*con);
+		}
+		//cerr << "WARNING: Could not connect to '" << SQL->dataBase << "'. Attempting to create the database." << endl;
+		if(mysql_real_connect(*con, SQL->host.c_str(), SQL->username.c_str(), SQL->password.c_str(), NULL, 0, NULL, 0) == NULL) {
+			return finish_with_error(*con);
+		}
+		query = "CREATE DATABASE " + SQL->dataBase;
 		if(mysql_query(*con, query.c_str())) {
 			return finish_with_error(*con);
 		}
+		query = "USE " + SQL->dataBase;
+		if(mysql_query(*con, query.c_str())){
+			return finish_with_error(*con);
+		}
 	}
-	query = "DROP TABLE IF EXISTS " + table;
+	query = "DROP TABLE IF EXISTS " + SQL->table;
 	if(mysql_query(*con, query.c_str())){
 		return finish_with_error(*con);
 	}
 	stringstream ss;
 	ss << "CREATE TABLE ";
-	ss << table;
+	ss << SQL->table;
 	ss <<   " ("
 			"ID int NOT NULL AUTO_INCREMENT,"
 			"timestamp TIMESTAMP,"
 			"mode TINYTEXT,"
 			"battery TINYINT,"
-			"tapeSpeed TINYINT,"
-			"audio TINYINT,"
+			"tapeSpeed TINYTEXT,"
+			"audio TINYTEXT,"
 			"servo TINYINT,"
 			"recordProtection TINYINT,"
 			"RCTC TINYINT,"
@@ -89,7 +101,7 @@ int initDB(MYSQL **con, string user, string password, string dataBase, string ta
 			"pm_available TINYINT,"
 			"pm_selected TINYINT,"
 			"PRIMARY KEY (ID))";
-	if(mysql_query(*con,ss.str().c_str()))
+	if(mysql_query(*con, ss.str().c_str()))
 	{
 		return finish_with_error(*con);
 	}
@@ -154,7 +166,6 @@ int writeStatusToDB(MYSQL *con, string table, string status){
 	ss << status;
 	ss << ")";
 	status = ss.str();
-	//cout << "status: " << status << endl;
 	if(mysql_query(con, status.c_str())){
 		return finish_with_error(con);
 	}

@@ -16,8 +16,8 @@ struct status_t {
 	bool battery;			//true = low
 	bool betamaxDV; 		//true = DV
 
-	int tapeSpeed; 			//00 = SP, 01 = LP
-	bool audio; 			//false = 12bit, true = 16bit
+	std::string tapeSpeed;
+	std::string audio;
 	bool servo;
 	bool recordProtection;
 	bool RCTC;				//Rewritable consumer timecode
@@ -29,6 +29,7 @@ struct status_t {
 	std::string DV_type; 	//player or camera
 
 	//real time counter
+	//equal to tape time? -> 00:00 at TAPE TOP
 	int rt_daysOnes;
 	int rt_daysTens;
 	int rt_hoursOnes;
@@ -52,6 +53,8 @@ struct status_t {
 
 	//Data guide, value of _7LN when _5HN == 8
 	int date_Time;
+
+	//date and time of recorded video
 	int d_yearTens;
 	int d_yearOnes;
 	int d_monthTens;

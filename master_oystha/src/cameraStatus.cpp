@@ -21,8 +21,8 @@ cameraStatus::cameraStatus() {
 	status.mode 				= "";
 	status.battery				= false;
 	status.betamaxDV 			= true;
-	status.tapeSpeed 			= 0b00;
-	status.audio 				= false;
+	status.tapeSpeed 			= "";
+	status.audio 				= "";
 	status.servo 				= false;
 	status.recordProtection 	= false;
 	status.RCTC					= false;
@@ -75,47 +75,12 @@ cameraStatus::~cameraStatus() {}
 void cameraStatus::setStatus(status_t p){
 	mut.lock();
 	status = p;
-	/*
-	mode 				= p->mode;
-	betamaxDV 			= p->betamaxDV;
-	battery				= p->battery;
-	tapeSpeed 			= p->tapeSpeed;
-	audio 				= p->audio;
-	servo 				= p->servo;
-	recordProtection 	= p->recordProtection;
-	RCTC				= p->RCTC;
-
-	//DV
-	DV_input 			= p->DV_input;
-	DV_line 			= p->DV_line;
-	DV_type				= p->DV_type;
-
-	//real time counter
-	rt_daysOnes 		= p->rt_daysOnes;
-	rt_daysTens 		= p->rt_daysTens;
-	rt_hoursOnes 		= p->rt_hoursOnes;
-	rt_hoursTens 		= p->rt_hoursTens;
-	rt_minutesOnes 		= p->rt_minutesOnes;
-	rt_minutesTens 		= p->rt_minutesTens;
-	rt_secondsOnes 		= p->rt_secondsOnes;
-	rt_secondsTens 		= p->rt_secondsTens;
-
-	//memory stick
-	ms_available		= p->ms_available;
-	ms_inserted			= p->ms_inserted;
-	ms_writeProtected	= p->ms_writeProtected;
-	ms_play				= p->ms_play;
-	ms_search			= p->ms_search;
-	ms_full				= p->ms_full;
-
-	//photo mode
-	pm_available		= p->pm_available;
-	pm_selected			= p->pm_selected;
-	*/
-
 	mut.unlock();
 }
 
+/*
+ * Return copy of this->status
+ */
 status_t cameraStatus::getStatus() {
 	status_t p;
 	mut.lock();
@@ -130,14 +95,17 @@ void cameraStatus::setDate_Time(int value) {
 	mut.unlock();
 }
 
+/*
+ * Create string of status values for use mysql_query
+ */
 string cameraStatus::getStatusString(){
 	status_t copy = getStatus();
 	stringstream ss;
 	ss << "'" 	<< copy.mode				<< "',";
 	ss 			<< copy.battery 			<< ",";
-	ss 			<< copy.betamaxDV			<< ",";
-	ss			<< copy.tapeSpeed			<< ",";
-	ss			<< copy.audio				<< ",";
+	ss << "'"	<< copy.tapeSpeed			<< "',";
+	ss << "'"	<< copy.audio				<< "',";
+	ss			<< copy.servo				<< ",";
 	ss			<< copy.recordProtection	<< ",";
 	ss			<< copy.RCTC				<< ",";
 	ss << "'"	<< copy.DV_input			<< "',";
@@ -179,17 +147,19 @@ string cameraStatus::getStatusString(){
  * Return true if status has been updated.
  */
 bool cameraStatus::LancToPlain(char* Buffer){
-	status_t copy = getStatus();
-	char _5LN = charToByte(Buffer[3]);
-	char _6HN = charToByte(Buffer[4]);
-	char _6LN = charToByte(Buffer[5]);
-	char _7HN = charToByte(Buffer[6]);
-	char _7LN = charToByte(Buffer[7]);
-	bool update = false;
-	string mode 	= copy.mode;
-	string input 	= copy.DV_input;
-	string type 	= copy.DV_type;
-	int line 		= copy.DV_line;
+	status_t copy 		= getStatus();
+	char _5LN 			= charToByte(Buffer[3]);
+	char _6HN 			= charToByte(Buffer[4]);
+	char _6LN 			= charToByte(Buffer[5]);
+	char _7HN 			= charToByte(Buffer[6]);
+	char _7LN 			= charToByte(Buffer[7]);
+	bool update 		= false;
+	string mode 		= copy.mode;
+	string tapeSpeed 	= copy.tapeSpeed;
+	string audio		= copy.audio;
+	string input 		= copy.DV_input;
+	string type 		= copy.DV_type;
+	int line 			= copy.DV_line;
 	switch(Buffer[0]){
 	case '0':
 		switch(Buffer[1]){
@@ -226,7 +196,8 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			mode = "AL INSERT";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -250,10 +221,11 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			break;
 		case '8':
 			//AL ins-pause
-			mode = "AL INS_PAUSE";
+			mode = "AL INSERT-PAUSE";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -261,24 +233,31 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '1':
 			//ejecting
+			mode = "EJECTING";
 			break;
 		case '2':
 			//cassett busy
+			mode = "CASSETT BUSY";
 			break;
 		case '4':
 			//timer-rec
+			mode = "TIMER-REC";
 			break;
 		case '6':
 			//x1 fwd
+			mode = "X1 FWD";
 			break;
 		case '7':
 			//1/5 fwd
+			mode = "1/5 FWD";
 			break;
 		case '8':
 			//AR insert
+			mode = "AR INSERT";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -286,6 +265,7 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '1':
 			//unload
+			mode = "UNLOAD";
 			break;
 		case '2':
 			//low-battery
@@ -293,21 +273,27 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			break;
 		case '3':
 			//go zero/play f.
+			mode = "GO ZERO/PLAY F.";
 			break;
 		case '4':
 			//timer-rec s.
+			mode = "TIMER-REC S.";
 			break;
 		case '6':
 			//x1 rev
+			mode = "X1 REV";
 			break;
 		case '7':
 			//1/5 rev
+			mode = "1/5 REV";
 			break;
 		case '8':
-			//AR ins-pauselanc
+			//AR ins-pause
+			mode = "AR INSERT-PAUSE";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -315,24 +301,31 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '2':
 			//dew stop
+			mode = "DEW STOP";
 			break;
 		case '3':
 			//fwd mem stop
+			mode = "FWD MEM STOP";
 			break;
 		case '4':
 			//AV insert
+			mode = "AV INSERT";
 			break;
 		case '6':
 			//cue
+			mode = "CUE";
 			break;
 		case '7':
 			//1/10 fwd
+			mode = "1/10 FWD";
 			break;
 		case '8':
 			//AL+V insert
+			mode = "AL+V INSERT";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -340,21 +333,27 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '2':
 			//emergency
+			mode = "EMERGENCY";
 			break;
 		case '4':
 			//AV ins.-pause
+			mode = "AV INSERT-PAUSE";
 			break;
 		case '6':
 			//rev
+			mode = "REV";
 			break;
 		case '7':
 			//1/10 rev
+			mode = "1/10 REV";
 			break;
 		case '8':
 			//AL+V ins-ps
+			mode = "AL+V INSERT-PAUSE";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -366,18 +365,23 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			break;
 		case '4':
 			//video insert
+			mode = "VIDEO INSERT";
 			break;
 		case '6':
 			//x2/x3 fwd
+			mode = "X2/X3 FWD";
 			break;
 		case '7':
 			//frame fwd
+			mode = "FRAME FWD";
 			break;
 		case '8':
 			//AR+V insert
+			mode = "AR+V INSERT";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -389,18 +393,22 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			break;
 		case '4':
 			//video ins-ps
+			mode = "VIDEO INSERT-PAUSE";
 			break;
 		case '6':
 			//x2/x3 rev
+			mode = "X2/X3 REV";
 			break;
 		case '7':
 			//frame rev
+			mode = "FRAME REV";
 			break;
 		case '8':
 			//AL+R ins-ps
+			mode = "AL+R INSERT-PAUSE";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -412,15 +420,19 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			break;
 		case '4':
 			//audio dub
+			mode = "AUDIO DUB";
 			break;
 		case '5':
 			//edit search+
+			mode = "EDIT SEARCH+";
 			break;
 		case '6':
 			//x9 fwd
+			mode = "X9 FWD";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -428,21 +440,27 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '2':
 			//stp after zero
+			mode = "STP AFTER ZERO";
 			break;
 		case '4':
 			//a.dub pause
+			mode = "AUDIO DUB PAUSE";
 			break;
 		case '5':
-			//edit search
+			//edit search-
+			mode = "EDIT SEARCH-";
 			break;
 		case '6':
 			//x9 rev
+			mode = "X9 REV";
 			break;
 		case '7':
 			//play/pause rev
+			mode = "PLAY/PAUSE REV";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -450,21 +468,27 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '2':
 			//load emer.
+			mode = "LOAD EMERGENCY";
 			break;
 		case '3':
 			//auto-play
+			mode = "AUTO-PLAY";
 			break;
 		case '4':
 			//cam rec
+			mode = "CAM REC";
 			break;
 		case '5':
 			//edit-s fwd
+			mode = "EDIT SEARCH FWD";
 			break;
 		case '6':
 			//frame sea. cue
+			mode = "FRAME SEARCH CUE";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -472,24 +496,31 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '1':
 			//unload emerg.
+			mode = "UNLOAD EMERGENCY";
 			break;
 		case '2':
 			//stop emerg. 1
+			mode = "STOP EMERGENCY 1";
 			break;
 		case '3':
 			//go zero/play r.
+			mode = "GO ZERO/PLAY R.";
 			break;
 		case '4':
 			//cam stby
+			mode = "CAM STBY";
 			break;
 		case '5':
 			//edit-s rev
+			mode = "EDIT SEARCH REV";
 			break;
 		case '6':
 			//frame sea rev.
+			mode = "FRAME SEARCH REV";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -497,15 +528,19 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '2':
 			//stop emerg. 2
+			mode = "STOP EMERGENCY 2";
 			break;
 		case '3':
 			//rew mem stop
+			mode = "REW MEM STOP";
 			break;
 		case '6':
 			//x14 fwd
+			mode = "X14 FWD";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -513,12 +548,15 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '3':
 			//hi-speed rew
+			mode = "HI-SPEED REW";
 			break;
 		case '6':
 			//x14 rev
+			mode = "X14 REV";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -526,9 +564,11 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '2':
 			//stop NC
+			mode = "STOP NC";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
@@ -536,14 +576,17 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		switch(Buffer[1]){
 		case '5':
 			//edit pause
+			mode = "EDIT PAUSE";
 			break;
 		default:
-			//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+			mode = "";
+			//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 			break;
 		}
 		break;
 	default:
-		//cout << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
+		mode = "";
+		//cerr << "Unknown value for Byte 4: " << Buffer[0] << Buffer[1] << ", ";
 		break;
 	}
 	if(copy.mode != mode){
@@ -553,17 +596,28 @@ bool cameraStatus::LancToPlain(char* Buffer){
 	switch(Buffer[2]){
 	case '1':
 		//Status V8 and Hi8
-		if(_6LN & 0b0000){
+		if((_6LN & 0b11) == 0b00) {
 			//tape speed SP (Standard Play)
-		}
-		if((_6LN & 0b0001) && !(_6LN & 0b0010)){
+			tapeSpeed = "SP";
+		} else if ((_6LN & 0b11) == 0b01) {
 			//tape speed LP (Long Play)
+			tapeSpeed = "LP";
 		}
-		if(_6LN & 0b0100){
+		if(copy.tapeSpeed != tapeSpeed){
+			update = true;
+			copy.tapeSpeed = tapeSpeed;
+		}
+		if(_6LN & 0b0100) {
 			//standard FM-sound
+			audio = "standard FM-sound";
 		}
-		if(_6LN & 0b1000){
+		if(_6LN &0b1000) {
 			//PCM-sound
+			audio = "PCM-sound";
+		}
+		if(copy.audio != audio){
+			update = true;
+			copy.audio = audio;
 		}
 		if(_6HN & 0b0001){
 			//camera-mode
@@ -582,17 +636,16 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			//10 micro-m
 		}
 		if(_7LN & 0b0010){
-			//lanc-mode
+			//camera-mode
 		}
 		if(_7LN & 0b1000){
 			//servo / mechanics on
 		}
-		if(_7HN & 0b0101){
-			//line
-		} else {
+		if((_7HN & 0b0101) == 0b0000) {
 			//tuner
-		}
-		if((_7HN & 0b0100) && !(_7HN & 0b0001)){
+		} else if((_7HN & 0b0101) == 0b0001) {
+			//tuner
+		} else if ((_7HN & 0b0101) == 0b0101) {
 			//sim
 		}
 		break;
@@ -602,7 +655,6 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//_6HN	Ten's
 		//_7LN 	Hundred's
 		//_7HN 	Thousand's
-		//cout << "Decimal counter " << _7HN << " " << _7LN << " " << _6HN << " " << _6LN << ", ";
 		break;
 	case '3':
 		//real time counter
@@ -611,16 +663,15 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//_6HN	Seconds Ten's / Picture Ten's
 		//_7LN 	Minutes One's / Picture Hundred's
 		//_7HN 	Minutes Ten's / Picture Thousand's
-		//cout << "Real time counter (MM:SS) " << _7HN << " " << _7LN << ":" <<_6HN << " " << _6LN << ", ";
-		if(copy.rt_minutesTens != _7HN || copy.rt_minutesOnes != _7LN){
+		if(copy.rt_minutesTens != (int)_7HN || copy.rt_minutesOnes != (int)_7LN){
 			update = true;
-			copy.rt_minutesTens = _7HN;
-			copy.rt_minutesOnes = _7LN;
+			copy.rt_minutesTens = (int)_7HN;
+			copy.rt_minutesOnes = (int)_7LN;
 		}
-		if(copy.rt_secondsTens != _6HN || copy.rt_secondsOnes != _6LN){
+		if(copy.rt_secondsTens != (int)_6HN || copy.rt_secondsOnes != (int)_6LN){
 			update = true;
-			copy.rt_secondsTens = _6HN;
-			copy.rt_secondsOnes = _6LN;
+			copy.rt_secondsTens = (int)_6HN;
+			copy.rt_secondsOnes = (int)_6LN;
 		}
 		break;
 	case '4':
@@ -630,12 +681,11 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//_7LN	Days One's
 		//_7HN 0+1	Days Ten's
 		//_7HN 2	RCTC (Rewritable consumer timecode)
-		//_7HN 3	sign(1=negativ)(or 0000/1111)?
+		//_7HN 3	sign(1=negativ)(or 0000/1111)
+
 		if(copy.RCTC != (bool)(_7HN & 0b0100)){
 			update = true;
 			copy.RCTC = (bool)(_7HN & 0b0100);
-			//RCTC (Rewritable consumer timecode)
-			//cout << "RCTC, ";
 		}
 		//byte 7 is probably not days, changes rapidly...
 		//if(copy.rt_daysTens != (_7HN & 0b0011) || copy.rt_daysOnes != _7LN){
@@ -643,10 +693,10 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//	copy.rt_daysTens = (_7HN & 0b0011);
 		//	copy.rt_daysOnes = _7LN;
 		//}
-		if(copy.rt_hoursTens != _6HN || copy.rt_hoursOnes != _6LN){
+		if(copy.rt_hoursTens != (int)_6HN || copy.rt_hoursOnes != (int)_6LN){
 			update = true;
-			copy.rt_hoursTens = _6HN;
-			copy.rt_hoursOnes = _6LN;
+			copy.rt_hoursTens = (int)_6HN;
+			copy.rt_hoursOnes = (int)_6LN;
 		}
 		break;
 	case '5':
@@ -654,7 +704,6 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//_6LN 	Minutes One's
 		//_6HN	Minutes Ten's
 		//_7LN 	Hours One's
-		//cout << "Remain time " << _7LN << ":" << _6HN << " " << _6LN << ", ";
 		if(!_7HN & 0b0100){
 			//calculating
 		}
@@ -670,7 +719,6 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			copy.recordProtection = (bool)(_6HN & 0b0010);
 		}
 		//_6HN 2+3 Byte 7 DV mode
-		//cout << "mode " << (_6HN >> 2) << ", ";
 		switch(_6HN >> 2){
 		//DV mode
 		case 0b00:
@@ -720,7 +768,7 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			}
 			break;
 		default:
-			//cout << "UNKOWN! ";
+			//unknown DV value
 			break;
 		}
 		if(copy.DV_input != input){
@@ -735,13 +783,27 @@ bool cameraStatus::LancToPlain(char* Buffer){
 			update = true;
 			copy.DV_type = type;
 		}
-		if(copy.tapeSpeed != (bool)(_6LN & 0b0011)){
-			update = true;
-			copy.tapeSpeed = (bool)(_6LN & 0b0011);
+		if((_6LN & 0b11) == 0b00) {
+			tapeSpeed = "SP";
+		} else if ((_6LN & 0b11) == 0b01) {
+			tapeSpeed = "LP";
 		}
-		if(copy.audio != (bool)(_6LN & 0b0100)){
+		if(copy.tapeSpeed != tapeSpeed){
 			update = true;
-			copy.audio = (bool)(_6LN & 0b0100);
+			copy.tapeSpeed = tapeSpeed;
+		}
+		if(_6LN & 0b0100) {
+			audio = "16bit";
+		} else {
+			audio = "12bit";
+		}
+		if(copy.audio != audio){
+			update = true;
+			copy.audio = audio;
+		}
+		if(copy.servo != (bool)(_6LN & 0b1000)) {
+			update = true;
+			copy.servo = (bool)(_6LN & 0b1000);
 		}
 		break;
 	case '8':
@@ -756,26 +818,26 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//Data Code
 		//(Tape + Picture)
 		if(copy.date_Time == 3) {
-			if(copy.d_monthTens != _7HN || copy.d_monthOnes != _7LN){
+			if(copy.d_monthTens != (int)_7HN || copy.d_monthOnes != (int)_7LN){
 				update = true;
-				copy.d_monthTens = _7HN;
-				copy.d_monthOnes = _7LN;
+				copy.d_monthTens = (int)_7HN;
+				copy.d_monthOnes = (int)_7LN;
 			}
-			if(copy.d_yearTens != _6HN || copy.d_yearOnes != _6LN){
+			if(copy.d_yearTens != (int)_6HN || copy.d_yearOnes != (int)_6LN){
 				update = true;
-				copy.d_yearTens = _6HN;
-				copy.d_yearOnes = _6LN;
+				copy.d_yearTens = (int)_6HN;
+				copy.d_yearOnes = (int)_6LN;
 			}
 		} else if(copy.date_Time == 4) {
-			if(copy.t_minutesTens != _7HN || copy.t_minutesOnes != _7LN){
+			if(copy.t_minutesTens != (int)_7HN || copy.t_minutesOnes != (int)_7LN){
 				update = true;
-				copy.t_minutesTens = _7HN;
-				copy.t_minutesOnes = _7LN;
+				copy.t_minutesTens = (int)_7HN;
+				copy.t_minutesOnes = (int)_7LN;
 			}
-			if(copy.t_hoursTens != _6HN || copy.t_hoursOnes != _6LN){
+			if(copy.t_hoursTens != (int)_6HN || copy.t_hoursOnes != (int)_6LN){
 				update = true;
-				copy.t_hoursTens = _6HN;
-				copy.t_hoursOnes = _6LN;
+				copy.t_hoursTens = (int)_6HN;
+				copy.t_hoursOnes = (int)_6LN;
 			}
 		}
 		break;
@@ -783,16 +845,16 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		//Data Code
 		//(Tape + Picture)
 		if(copy.date_Time == 3) {
-			if(copy.d_dayTens != _6HN || copy.d_dayOnes != _6LN){
+			if(copy.d_dayTens != (int)_6HN || copy.d_dayOnes != (int)_6LN){
 				update = true;
-				copy.d_dayTens = _6HN;
-				copy.d_dayOnes = _6LN;
+				copy.d_dayTens = (int)_6HN;
+				copy.d_dayOnes = (int)_6LN;
 			}
 		} else if(copy.date_Time == 4) {
-			if(copy.t_secondsTens != _6HN || copy.t_secondsOnes != _6LN){
+			if(copy.t_secondsTens != (int)_6HN || copy.t_secondsOnes != (int)_6LN){
 				update = true;
-				copy.t_secondsTens = _6HN;
-				copy.t_secondsOnes = _6LN;
+				copy.t_secondsTens = (int)_6HN;
+				copy.t_secondsOnes = (int)_6LN;
 			}
 		}
 		break;
@@ -807,6 +869,15 @@ bool cameraStatus::LancToPlain(char* Buffer){
 		break;
 	case 'C':
 		//Status Hi8, DV (+GC1)
+		if(_7LN & 0b0001) {
+			//camera mode / CTL found
+		}
+		if(_7LN & 0b0100) {
+			//edit on
+		}
+		if(_7LN & 0b1000) {
+			//auto Hi8
+		}
 		break;
 	case 'E':
 		//Status Photo and Memory Stick
@@ -857,7 +928,7 @@ bool cameraStatus::LancToPlain(char* Buffer){
 	}
 	if(_5LN & 0b0001){
 		//invalid transmitted code
-		//cout << "INVALID TRANSMITTED CODE, ";
+		//not seen yet, error handling?
 	}
 	//rec protection
 	if(copy.recordProtection != (bool)(_5LN & 0b0010)){
@@ -871,12 +942,9 @@ bool cameraStatus::LancToPlain(char* Buffer){
 	}
 	if(_5LN & 0b1000){
 		//zero mem / zero found
-		//cout << "ZERO MEM / ZERO FOUND";
 	}
-	//cout << endl;
 	if(update){
 		setStatus(copy);
-		//cout << "Buffer:" << Buffer;
 		//printStatus();
 	}
 	return update;
@@ -896,7 +964,7 @@ void cameraStatus::printStatus(){
 	if(copy.battery){
 		cout << "Battery: LOW" << endl;
 	}
-	cout << "Audio: " << ((copy.audio)? "16bit, ":"12bit, ");
+	cout << "Audio: " << copy.audio << ", ";
 	cout << "Tape Speed: " << copy.tapeSpeed << ", Servo: " << copy.servo << ", ";
 	cout << "Record Protection: " << copy.recordProtection << ", RCTC: " << copy.RCTC << endl;
 	cout << "Memory stick, available: " << copy.ms_available << ", inserted: " << copy.ms_inserted << ", write protected: " << copy.ms_writeProtected;
@@ -904,9 +972,7 @@ void cameraStatus::printStatus(){
 	cout << "Photo Mode, available: " << copy.pm_available << ", selected: " << copy.pm_selected << endl;
 }
 
-/*
-
-bool operator ==(const cameraStatus& status1, const cameraStatus& status2) {
+bool operator ==(const status_t& status1, const status_t& status2) {
 	return ((status1.mode == status2.mode)
 			&& (status1.betamaxDV == status2.betamaxDV)
 			&& (status1.tapeSpeed == status2.tapeSpeed)
@@ -934,5 +1000,3 @@ bool operator ==(const cameraStatus& status1, const cameraStatus& status2) {
 			&& (status1.pm_available == status2.pm_available)
 			&& (status1.pm_selected == status2.pm_selected));
 }
-
-*/

@@ -40,33 +40,28 @@
 
 using namespace std;
 
-string device 	= "/dev/ttyO2";
-string model 	= "default";
-string xmlfile 	= "sample.xml";
-string cmdfile 	= "/usr/share/nginx/html/test.txt";
-
-string username = "root";
-string password = "root";
-string dataBase = "statusLanc";
-string table 	= "Camera";
-
 MYSQL *con;
 elm624* elm;
 camera* cam;
+options_t options;
+printValues_t printValues;
 
 /*
  * Reads file when the file is modified. Forwards content of file to camera or elm624.
  * Creates file if it doesn't exist.
  */
 void commandUpdate(void* file) {
-	//cout << "----------------Thread " << this_thread::get_id() << " start----------------" << endl;
-	cout << "----------------Thread commandUpdate start----------------" << endl;
+	//cout << "----------------Thread commandUpdate start----------------" << endl;
 	const char* path = (const char*)file;
 	int fd, wd, len, i, res;
 	/*
 	 * Create file 'path' if not existing. Read block calling thread until file is opened by other thread.
 	 */
 	int handler = open(path, O_RDONLY | O_CREAT );
+	if (handler <0){
+		cerr << "commandoUpdate ERROR: Open of '" << path << "' failed." << endl;
+		exit(2);
+	}
 	char buf[sizeof(struct inotify_event) + PATH_MAX];
 	char cmd[MAX_LENGTH];
 	if((fd = inotify_init()) < 0) {
@@ -91,16 +86,14 @@ void commandUpdate(void* file) {
 					if(strncmp(cmd, "cam_", 4) == 0) {
 						cam->writeCommand(cmd);
 					} else if(strncmp(cmd, "elm_", 4) == 0) {
-						//cout << "cmd: '" << cmd << "'." << endl;
 						elm->writeCommand(cmd);
 					} else if(strcmp(cmd, "EXIT") == 0) {
 						elm->writeString("EXIT");
 						close(handler);
-						//exit(0);
-						cout << "----------------Thread commandUpdate end------------------" << endl;
+												//cout << "----------------Thread commandUpdate end------------------" << endl;
 						pthread_exit(NULL);
 					} else {
-						cerr << "Unknown command: '" << cmd << "'." << endl;
+						cerr << "commandoUpdate WARNING: Unknown command: '" << cmd << "'." << endl;
 					}
 				}
 			}
@@ -114,7 +107,7 @@ void commandUpdate(void* file) {
 
 
 void cameraUpdate(void* elm) {
-	cout << "----------------Thread cameraUpdate start-----------------" << endl;
+	//cout << "----------------Thread cameraUpdate start-----------------" << endl;
 	elm624* pelm = (elm624*)elm;
 	int res;
 	char Buffer[MAX_LENGTH];
@@ -133,22 +126,19 @@ void cameraUpdate(void* elm) {
 		case 10:
 			//status message
 			if(cam->status->LancToPlain(Buffer)) {
-				//cout << "UPDATE" << endl;
+				//status change, UPDATE
 				status = cam->status->getStatusString();
-				writeStatusToDB(con, table, status);
+				writeStatusToDB(con, options.SQL.table, status);
 			}
 			break;
 		default:
 			if(res > 2) {
 				Buffer[res-2] = 0;
 				if(strcmp(Buffer, "EXIT") == 0){
-					//cout << "EXIT" << endl;
 					stop=true;
 				} else if(strcmp(Buffer, "SYNC OK") == 0){
-					//cout << "SYNC OK" << endl;
 					pelm->setSync(true);
 				} else if(strcmp(Buffer, "NO SYNC") == 0){
-					//cout << "NO SYNC" << endl;
 					pelm->setSync(false);
 				} else if(strncmp(Buffer, "ELM", 3) == 0){
 					pelm->setID(Buffer);
@@ -165,21 +155,21 @@ void cameraUpdate(void* elm) {
 			}
 		}
 	}
-	cout << "----------------Thread cameraUpdate end-------------------" << endl;
+	//cout << "----------------Thread cameraUpdate end-------------------" << endl;
 	pthread_exit(NULL);
 }
 
-void Test2(){
-	cout << "Thread start" << endl;
-	for(int i=0; i<MAX_LENGTH; i++) cout << i << endl;
-	cout << "Thread end" << endl;
-}
-
 /*
- * INPUT ARGUMENTS
- * user SQL
- * pwd SQL
- * PATH command file
+ * MUST BE RUN AS ROOT TO GET ACCESS TO TTYO*
+ * DEFAULT VALUES:
+ * --dev=/dev/ttyO2
+ * --SQL-user=root
+ * --SQL-password=root
+ * --SQL-database=statusLanc
+ * --SQL-table=Camera
+ * --cmd=command.txt
+ * --xml=LANC.xml
+ * --model="model"
  */
 int main(int argc, const char **argv){
 	//create camera and elm
@@ -187,37 +177,59 @@ int main(int argc, const char **argv){
 	//thread read from elm, insert into SQL database
 	//join threads
 	//delete camera and elm
-
-	cout << "START, argc='" << argc << "'" << endl;
-	for(int i=0; i<argc; i++){
-		cout << "argv[" << i <<"]: '" << argv[i] << "'." << endl;
-	}
-	if(argc == 2){
-		model = argv[1];
-	}
-	elm = new elm624(device, xmlfile);
-	cam = new camera(model, xmlfile, elm);
-
-	initDB(&con, username, password, dataBase, table);
-	if(con == NULL) {
-		cerr << "con == NULL" << endl;
+	if(argc <= 1) {
+		cout << "No input given, using default option values. To change values see --help." << endl;
+	} else {
+		setOptions(argc, argv, &options, &printValues);
 	}
 
-	//cam->printCommandValues();
-	//elm->printCommandValues();
+	if(printValues.options) {
+		cout << "Value of options" 							<< endl;
+		cout << "  --dev=" 			<< options.device 		<< endl;
+		cout << "  --cmd=" 			<< options.cmdfile 		<< endl;
+		if(options.xmlfile.length() > 0 && options.xmlfile.find(".xml") != string::npos) {
+			cout << "  --xml=" 		<< options.xmlfile 		<< endl;
+		}
+		cout << "  --model=" 		<< options.model 		<< endl;
+		cout << "  --SQL-host=" 	<< options.SQL.host 	<< endl;
+		cout << "  --SQL-user=" 	<< options.SQL.username << endl;
+		cout << "  --SQL-password=" << options.SQL.password << endl;
+		cout << "  --SQL-database=" << options.SQL.dataBase << endl;
+		cout << "  --SQL-table=" 	<< options.SQL.table 	<< endl;
+		cout << endl;
+	}
 
-	thread readUser (commandUpdate, (void*)cmdfile.c_str());
+	elm = new elm624(options.device, options.xmlfile);
+	cam = new camera(options.model, options.xmlfile, elm);
+
+	if(initDB(&con, &options.SQL)) {
+		cerr << "ERROR: Failed establishing connection to SQL." << endl;
+		cerr << "       user      = " << options.SQL.username 	<< endl;
+		cerr << "       password  = " << options.SQL.password 	<< endl;
+		cerr << "       database  = " << options.SQL.dataBase 	<< endl;
+		cerr << "       table     = " << options.SQL.table 		<< endl;
+		exit(2);
+	}
+	if(printValues.camera) {
+		cam->printCommandValues();
+	}
+	if(printValues.elm) {
+		elm->printCommandValues();
+	}
+
+	thread readUser (commandUpdate, (void*)options.cmdfile.c_str());
 	thread readCam	(cameraUpdate, (void*)elm);
 
 	readUser.join();
 	readCam.join();
 
 	//power off camera
-	elm->writeString("END OF MAIN");
 	elm->writeString("EXIT");
-	elm->writeString("185E");
+	elm->writeString("182A");
+	elm->writeString("END OF MAIN");
 	delete cam;
 	delete elm;
 	mysql_close(con);
-	pthread_exit(NULL);
+	//cout << "END OF MAIN" << endl;
+	exit(0);
 }

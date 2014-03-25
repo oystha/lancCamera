@@ -18,15 +18,12 @@
 
 using namespace std;
 
-//mutex mut_ready;
-//pthread_mutex_t mut_ready;
-//mutex mut_sync;
-//pthread_mutex_t mut_sync;
-
 elm624::elm624(string Device, string xmlfile) {
 	this->xmlfile = xmlfile;
 	fd = 0;
-	setCommands();
+	if(this->xmlfile.length() > 0) {
+		setCommands();
+	}
 	Open(Device.c_str());
 	setReady(false);
 	sync = false;
@@ -88,8 +85,8 @@ int elm624::Open(const char *Device) {
 	     */
 		fd = open(Device, O_RDWR | O_NOCTTY );
 		if (fd <0){
-			cout << "Open failed, do you have sufficient privileges." << endl;
-			return -1;
+			cerr << "Open of '" << Device << "' failed, do you have sufficient privileges?" << endl;
+			exit(2);
 		}
 		/* save current serial port settings */
 		tcgetattr(fd,&oldtio);
@@ -123,13 +120,14 @@ int elm624::Open(const char *Device) {
 	    /*
 	     *	initialize all control characters
 	     *  default values can be found in /usr/include/termios.h, and are given
-	     *  in the comments, but we don't need them here
+	     *  in the comments, but we don't need them here.
+	     *  '>' is used as end of file since this is the response when the elm chip is ready for input.
 	     */
 		newtio.c_cc[VINTR]    = 0;     // Ctrl-c
 		newtio.c_cc[VQUIT]    = 0;     // Ctrl-'\'
 		newtio.c_cc[VERASE]   = 0;     // del
 		newtio.c_cc[VKILL]    = 0;     // @
-		newtio.c_cc[VEOF]     = '>';   //4;     // Ctrl-d
+		newtio.c_cc[VEOF]     = '>';   // Ctrl-d
 		newtio.c_cc[VTIME]    = 1;     // inter-character timer unused
 		newtio.c_cc[VMIN]     = 1;     // blocking read until 1 character arrives
 		newtio.c_cc[VSWTC]    = 0;     // '\0'
@@ -159,7 +157,7 @@ int elm624::Close() {
  * Return values:
  * 	-1 	read fail,
  * 	 0 	prompt(>) read,
- * 	 number of bytes read before '\n'.
+ * 	 number of bytes read.
  */
 int elm624::Read(char* Buffer){
 	int res = read(fd,Buffer,255);
@@ -168,80 +166,6 @@ int elm624::Read(char* Buffer){
 	return res;
 }
 
-/*
- * Return 0 if command was understood and forwarded successfully.
- * -1 on failure
- */
-int elm624::writeCommand(string cmd) {
-	string tmp;
-	if(cmd.find("elm_") > 0) {
-		cerr << "elm624::writeCmd ";
-		cerr << "WARNING: command '" << cmd << "' should not have arrived here!" << endl;
-		return -1;
-	}
-	cmd = cmd.substr(4);
-	if(cmd == "checkSync") {
-		return writeString(checkSync);
-	} else if(cmd == "identify") {
-		return writeString(identify);
-	} else if(cmd == "resetAll") {
-		return writeString(resetAll);
-	} else if(cmd == "setDefaults") {
-		return writeString(setDefaults);
-	} else if(cmd == "useVersionTwo") {
-		return writeString(useVersionTwo);
-	} else if(strncmp(cmd.c_str(), "send", 4) == 0) {
-		tmp = cmd.substr(4);
-		if(tmp == "Pulse") {
-			return writeString(sendPulse);
-		} else if(tmp == "OnlyChange") {
-			return writeString(sendOnlyChanges);
-		} else if(tmp == "All") {
-			return writeString(sendAll);
-		} else if(tmp == "FormatedData") {
-			return writeString(sendFormatedData);
-		} else if(tmp == "RawData") {
-			return writeString(sendRawData);
-		}
-	} else if(strncmp(cmd.c_str(), "echo", 4) == 0) {
-		tmp = cmd.substr(4);
-		if(tmp == "Off") {
-			return writeString(echoOff);
-		} else if(tmp == "On") {
-			return writeString(echoOn);
-		}
-	} else if(strncmp(cmd.c_str(), "quiet", 5) == 0) {
-		tmp = cmd.substr(5);
-		if(tmp == "Off") {
-			return writeString(quietOff);
-		} else if(tmp == "On") {
-			return writeString(quietOn);
-		}
-	} else if(strncmp(cmd.c_str(), "duplicate", 9) == 0) {
-		tmp = cmd.substr(9);
-		if(tmp == "Off") {
-			return writeString(duplicateOff);
-		} else if(tmp == "On") {
-			return writeString(duplicateOn);
-		}
-	} else if(strncmp(cmd.c_str(), "linefeed", 8) == 0) {
-		tmp = cmd.substr(8);
-		if(tmp == "Off") {
-			return writeString(linefeedOff);
-		} else if(tmp == "On") {
-			return writeString(linefeedOn);
-		}
-	} else if(cmd == "triggerPulseOnWord") {
-		return writeString(triggerPulseOnWord);
-	} else if(cmd == "repeatCommand") {
-		return writeString(repeatCommand);
-	} else if(cmd == "monitorAllMessages") {
-		return writeString(monitorAllMessages);
-	}
-	cerr << "elm624::writeCmd ";
-	cerr << "WARNING: no match for command '" << cmd << "'." << endl;
-	return -1;
-}
 
 /*
  * Return number of bytes sent. -1 if failed
@@ -277,6 +201,81 @@ int elm624::writeString(string Buffer) {
 }
 
 /*
+ * Return 0 if command was understood and forwarded successfully.
+ * -1 on failure
+ */
+int elm624::writeCommand(string cmd) {
+	string tmp;
+	if(cmd.find("elm_") > 0) {
+		cerr << "elm624::writeCmd ";
+		cerr << "WARNING: command '" << cmd << "' should not have arrived here!" << endl;
+		return -1;
+	}
+	cmd = cmd.substr(4);
+	if(cmd == "checkSync") {
+		return writeString(commands.checkSync);
+	} else if(cmd == "identify") {
+		return writeString(commands.identify);
+	} else if(cmd == "resetAll") {
+		return writeString(commands.resetAll);
+	} else if(cmd == "setDefaults") {
+		return writeString(commands.setDefaults);
+	} else if(cmd == "useVersionTwo") {
+		return writeString(commands.useVersionTwo);
+	} else if(strncmp(cmd.c_str(), "send", 4) == 0) {
+		tmp = cmd.substr(4);
+		if(tmp == "Pulse") {
+			return writeString(commands.sendPulse);
+		} else if(tmp == "OnlyChange") {
+			return writeString(commands.sendOnlyChanges);
+		} else if(tmp == "All") {
+			return writeString(commands.sendAll);
+		} else if(tmp == "FormatedData") {
+			return writeString(commands.sendFormatedData);
+		} else if(tmp == "RawData") {
+			return writeString(commands.sendRawData);
+		}
+	} else if(strncmp(cmd.c_str(), "echo", 4) == 0) {
+		tmp = cmd.substr(4);
+		if(tmp == "Off") {
+			return writeString(commands.echoOff);
+		} else if(tmp == "On") {
+			return writeString(commands.echoOn);
+		}
+	} else if(strncmp(cmd.c_str(), "quiet", 5) == 0) {
+		tmp = cmd.substr(5);
+		if(tmp == "Off") {
+			return writeString(commands.quietOff);
+		} else if(tmp == "On") {
+			return writeString(commands.quietOn);
+		}
+	} else if(strncmp(cmd.c_str(), "duplicate", 9) == 0) {
+		tmp = cmd.substr(9);
+		if(tmp == "Off") {
+			return writeString(commands.duplicateOff);
+		} else if(tmp == "On") {
+			return writeString(commands.duplicateOn);
+		}
+	} else if(strncmp(cmd.c_str(), "linefeed", 8) == 0) {
+		tmp = cmd.substr(8);
+		if(tmp == "Off") {
+			return writeString(commands.linefeedOff);
+		} else if(tmp == "On") {
+			return writeString(commands.linefeedOn);
+		}
+	} else if(cmd == "triggerPulseOnWord") {
+		return writeString(commands.triggerPulseOnWord);
+	} else if(cmd == "repeatCommand") {
+		return writeString(commands.repeatCommand);
+	} else if(cmd == "monitorAllMessages") {
+		return writeString(commands.monitorAllMessages);
+	}
+	cerr << "elm624::writeCmd ";
+	cerr << "WARNING: no match for command '" << cmd << "'." << endl;
+	return -1;
+}
+
+/*
  * Get values from xmlfile
  */
 int elm624::setCommands(){
@@ -285,27 +284,27 @@ int elm624::setCommands(){
 	if (doc) {
 		for (int i = 0; i < doc->getChildCount("root", 0, "elm"); i++) {
 			if(doc->getAttributeValue("elm", i, "type") == "624"){
-				useVersionTwo		= doc->getChildValue("elm", i, "useVersionTwo");
-				sendAll				= doc->getChildValue("elm", i, "sendAll");
-				sendOnlyChanges		= doc->getChildValue("elm", i, "sendOnlyChanges");
-				checkSync			= doc->getChildValue("elm", i, "checkSync");
-				setDefaults			= doc->getChildValue("elm", i, "setDefaults");
-				duplicateOff		= doc->getChildValue("elm", i, "duplicateOff");
-				duplicateOn			= doc->getChildValue("elm", i, "duplicateOn");
-				echoOff		 		= doc->getChildValue("elm", i, "echoOff");
-				echoOn				= doc->getChildValue("elm", i, "echoOn");
-				sendFormatedData	= doc->getChildValue("elm", i, "sendFormatedData");
-				identify			= doc->getChildValue("elm", i, "identify");
-				linefeedOff			= doc->getChildValue("elm", i, "linefeedOff");
-				linefeedOn	 		= doc->getChildValue("elm", i, "linefeedOn");
-				monitorAllMessages	= doc->getChildValue("elm", i, "monitorAllMessages");
-				quietOff			= doc->getChildValue("elm", i, "quietOff");
-				quietOn				= doc->getChildValue("elm", i, "quietOn");
-				sendRawData			= doc->getChildValue("elm", i, "sendRawData");
-				repeatCommand	 	= doc->getChildValue("elm", i, "repeatCommand");
-				sendPulse			= doc->getChildValue("elm", i, "sendPulse");
-				triggerPulseOnWord	= doc->getChildValue("elm", i, "triggerPulseOnWord");
-				resetAll			= doc->getChildValue("elm", i, "resetAll");
+				commands.useVersionTwo		= doc->getChildValue("elm", i, "useVersionTwo");
+				commands.sendAll			= doc->getChildValue("elm", i, "sendAll");
+				commands.sendOnlyChanges	= doc->getChildValue("elm", i, "sendOnlyChanges");
+				commands.checkSync			= doc->getChildValue("elm", i, "checkSync");
+				commands.setDefaults		= doc->getChildValue("elm", i, "setDefaults");
+				commands.duplicateOff		= doc->getChildValue("elm", i, "duplicateOff");
+				commands.duplicateOn		= doc->getChildValue("elm", i, "duplicateOn");
+				commands.echoOff		 	= doc->getChildValue("elm", i, "echoOff");
+				commands.echoOn				= doc->getChildValue("elm", i, "echoOn");
+				commands.sendFormatedData	= doc->getChildValue("elm", i, "sendFormatedData");
+				commands.identify			= doc->getChildValue("elm", i, "identify");
+				commands.linefeedOff		= doc->getChildValue("elm", i, "linefeedOff");
+				commands.linefeedOn	 		= doc->getChildValue("elm", i, "linefeedOn");
+				commands.monitorAllMessages	= doc->getChildValue("elm", i, "monitorAllMessages");
+				commands.quietOff			= doc->getChildValue("elm", i, "quietOff");
+				commands.quietOn			= doc->getChildValue("elm", i, "quietOn");
+				commands.sendRawData		= doc->getChildValue("elm", i, "sendRawData");
+				commands.repeatCommand	 	= doc->getChildValue("elm", i, "repeatCommand");
+				commands.sendPulse			= doc->getChildValue("elm", i, "sendPulse");
+				commands.triggerPulseOnWord	= doc->getChildValue("elm", i, "triggerPulseOnWord");
+				commands.resetAll			= doc->getChildValue("elm", i, "resetAll");
 				ret = 0;
 				break;
 			}
@@ -316,72 +315,75 @@ int elm624::setCommands(){
 }
 
 void elm624::printCommandValues() {
-	cout << "LANC value of available commands:" 			<< endl;
-	cout << "useVersionTwo:      " << useVersionTwo 		<< endl;
-	cout << "sendAll:            " << sendAll 				<< endl;
-	cout << "sendOnlyChanges:    " << sendOnlyChanges 		<< endl;
-	cout << "checkSync:          " << checkSync 			<< endl;
-	cout << "setDefaults:        " << setDefaults 			<< endl;
-	cout << "duplicateOff:       " << duplicateOff 			<< endl;
-	cout << "duplicateOn:        " << duplicateOn 			<< endl;
-	cout << "echoOff:            " << echoOff 				<< endl;
-	cout << "echoOn:             " << echoOn 				<< endl;
-	cout << "sendFormatedData:   " << sendFormatedData 		<< endl;
-	cout << "identify:           " << identify 				<< endl;
-	cout << "linefeedOff:        " << linefeedOff			<< endl;
-	cout << "linefeedOn:         " << linefeedOn 			<< endl;
-	cout << "monitorAllMessages: " << monitorAllMessages 	<< endl;
-	cout << "quietOff:           " << quietOff 				<< endl;
-	cout << "quietOn:            " << quietOn 				<< endl;
-	cout << "sendRawData:        " << sendRawData 			<< endl;
-	cout << "repeatCommand:      " << repeatCommand 		<< endl;
-	cout << "sendPulse:          " << sendPulse 			<< endl;
-	cout << "triggerPulseOnWord: " << triggerPulseOnWord 	<< endl;
-	cout << "resetAll:           " << resetAll 				<< endl;
+	cout << "Available commands and their LANC values for elm624:" << endl;
+	cout << "  useVersionTwo:      " << commands.useVersionTwo 		<< endl;
+	cout << "  sendAll:            " << commands.sendAll 			<< endl;
+	cout << "  sendOnlyChanges:    " << commands.sendOnlyChanges 	<< endl;
+	cout << "  checkSync:          " << commands.checkSync 			<< endl;
+	cout << "  setDefaults:        " << commands.setDefaults 		<< endl;
+	cout << "  duplicateOff:       " << commands.duplicateOff 		<< endl;
+	cout << "  duplicateOn:        " << commands.duplicateOn 		<< endl;
+	cout << "  echoOff:            " << commands.echoOff 			<< endl;
+	cout << "  echoOn:             " << commands.echoOn 			<< endl;
+	cout << "  sendFormatedData:   " << commands.sendFormatedData 	<< endl;
+	cout << "  identify:           " << commands.identify 			<< endl;
+	cout << "  linefeedOff:        " << commands.linefeedOff		<< endl;
+	cout << "  linefeedOn:         " << commands.linefeedOn 		<< endl;
+	cout << "  monitorAllMessages: " << commands.monitorAllMessages << endl;
+	cout << "  quietOff:           " << commands.quietOff 			<< endl;
+	cout << "  quietOn:            " << commands.quietOn 			<< endl;
+	cout << "  sendRawData:        " << commands.sendRawData 		<< endl;
+	cout << "  repeatCommand:      " << commands.repeatCommand 		<< endl;
+	cout << "  sendPulse:          " << commands.sendPulse 			<< endl;
+	cout << "  triggerPulseOnWord: " << commands.triggerPulseOnWord << endl;
+	cout << "  resetAll:           " << commands.resetAll 			<< endl;
 }
-
+/*
+ * Function for testing, send commands all commands to chip.
+ * Sleep between commands to allow chip to handle request.
+ */
 void elm624::testCommands() {
 	writeCommand("elm_useVersionTwo");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_sendAll");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_sendOnlyChange");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_checkSync");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_setDefaults");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_duplicateOff");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_duplicateOn");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_echoOff");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_echoOn");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_sendFormatedData");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_identify");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_linefeedOff");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_linefeedOff");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_monitorAllMessages");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_quietOff");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_quietOn");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_sendRawData");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_repeatCommand");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_sendPulse");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_triggerPulseOnWord");
-	//sleep(1);
+	sleep(1);
 	writeCommand("elm_resetAll");
-	//sleep(1);
+	sleep(1);
 }
 

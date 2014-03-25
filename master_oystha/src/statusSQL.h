@@ -12,9 +12,11 @@
 
 #include <mysql.h>
 
+#include "div.h"
+
 int finish_with_error(MYSQL *con);
 
-int initDB(MYSQL** con, std::string user, std::string password, std::string dataBase, std::string table);
+int initDB(MYSQL** con, SQL_options_t* SQL);
 int writeStatusToDB(MYSQL* con, std::string table, std::string status);
 
 #endif /* STATUSSQL_H_ */

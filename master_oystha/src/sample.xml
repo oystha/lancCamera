@@ -10,9 +10,7 @@ Write to chip by commands like e.g. elm_checkSync.
 		<mode>1805</mode>
 		<enter>1816</enter>
 		<powerOff>182A</powerOff>
-		<photoWrite>182B</photoWrite>
 		<eject>182C</eject>
-		<main>182E</main>
 		<stop>1830</stop>
 		<pause>1832</pause>
 		<startStop>1833</startStop>
@@ -21,22 +19,13 @@ Write to chip by commands like e.g. elm_checkSync.
 		<fwd>1838</fwd>
 		<photoCapture>1839</photoCapture>
 		<record>183A</record>
-		<still>1840</still>
-		<x>
-			<tenth>1844</tenth><!--x1/10-->
-			<fifth>1846</fifth><!--x1/5-->
-			<two>1828</two><!--x2-->
-			<nine>184C</nine><!--x9-->
-			<fourteen>184A</fourteen><!--x14-->
-		</x>
 		<execute>18A2</execute>
-		<menu>
-			<menu>189A</menu>
-			<up>1884</up>
-			<down>1886</down>
-			<right>18C2</right>
-			<left>18C4</left>
-		</menu>
+		<!--Menu-->
+		<menu>189A</menu>
+		<menuUp>1884</menuUp>
+		<menuDown>1886</menuDown>
+		<menuRight>18C2</menuRight>
+		<menuLeft>18C4</menuLeft>
 		<!--Variable speed zoom Tele: 0 slowest, 7 fastest.-->
 		<zoomTele0>2800</zoomTele0>
 		<zoomTele1>2802</zoomTele1>
@@ -57,15 +46,10 @@ Write to chip by commands like e.g. elm_checkSync.
 		<zoomWide7>281E</zoomWide7>
 	</camera>
 	<camera model="Sony 3CCD">
-		<play>1834</play>
-		<stop>1830</stop>
-		<record>1833</record>
+		<mode>NULL</mode>
+		<enter>NULL</enter>
 	</camera>
 	<camera model="Sony miniDV">
-		<play>FFFF</play>
-		<stop>BBBB</stop>
-		<record>CCCC</record>
-		<pause>NULL</pause>
 	</camera>
 	<!--Commands for ELM chips-->
 	<elm type="624">

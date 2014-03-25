@@ -16,6 +16,33 @@
 #include <termios.h>
 
 int charToInt(char);
+/*
+ *Commands for elm624 with default values
+ */
+struct elm624Commands_t {
+	std::string useVersionTwo 		= "AT2D";
+	std::string sendAll 			= "ATC0";
+	std::string sendOnlyChanges 	= "ATC1";
+	std::string checkSync 			= "ATCS";
+	std::string setDefaults 		= "ATD";
+	std::string duplicateOff 		= "ATD0";
+	std::string duplicateOn 		= "ATD1";
+	std::string echoOff 			= "ATE0";
+	std::string echoOn 				= "ATE1";
+	std::string sendFormatedData 	= "ATFD";
+	std::string identify 			= "ATI";
+	std::string linefeedOff 		= "ATL0";
+	std::string linefeedOn 			= "ATL1";
+	std::string monitorAllMessages 	= "ATMA";
+	std::string quietOff 			= "ATQ0";
+	std::string quietOn 			= "ATQ1";
+	std::string sendRawData 		= "ATRD";
+	std::string repeatCommand 		= "ATR5";
+	std::string sendPulse 			= "ATSP";
+	std::string triggerPulseOnWord 	= "ATTP0";
+	std::string resetAll 			= "ATZ";
+};
+
 
 class elm624 {
 	std::mutex mut_ready;
@@ -26,20 +53,12 @@ public:
 	elm624(std::string Device, std::string xmlfile);
 	~elm624();
 
-	int Open(const char*);
+	int Open(const char* Device);
 	int Close();
 	int setCommands();
 	int Read(char*);
-	int ReadThread(char*);
-	void ProcessInfo();
-	void ProcessCmd(char*);
-	void ProcessLanc(char*);
-	void PlainToLanc(char*);
-	void LancToPlain(char*);
-	int Write(const void*, int);
 	int writeString(std::string Buffer);
-	int writeBump();
-	int writeCommand(std::string);
+	int writeCommand(std::string cmd);
 	std::string getID();
 	void setID(std::string);
 	bool getSync();
@@ -50,37 +69,17 @@ public:
 	void testCommands();
 
 private:
+	elm624Commands_t commands;
+
 	std::string ID;
-
 	std::string xmlfile;
-
 	bool ready, sync;
 	struct termios oldtio, newtio;
 	int fd;
 	const char end = '\r';
 
-	//Commands
-	std::string useVersionTwo;
-	std::string sendAll;
-	std::string sendOnlyChanges;
-	std::string checkSync;
-	std::string setDefaults;
-	std::string duplicateOff;
-	std::string duplicateOn;
-	std::string echoOff;
-	std::string echoOn;
-	std::string sendFormatedData;
-	std::string identify;
-	std::string linefeedOff;
-	std::string linefeedOn;
-	std::string monitorAllMessages;
-	std::string quietOff;
-	std::string quietOn;
-	std::string sendRawData;
-	std::string repeatCommand;
-	std::string sendPulse;
-	std::string triggerPulseOnWord;
-	std::string resetAll;
+	int Write(const void* Buffer, int Length);
+	int writeBump();
 };
 
 #endif /* ELM624_H_ */

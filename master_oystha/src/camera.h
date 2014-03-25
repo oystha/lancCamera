@@ -13,6 +13,50 @@
 #include "elm624.h"
 #include "cameraStatus.h"
 
+/*
+ * Commands for camera with default values
+ */
+struct cameraCommands_t {
+	std::string MODE		= "1805";
+	std::string ENTER		= "1816";
+	std::string POWEROFF	= "182A";
+	std::string EJECT		= "18C2";
+	std::string STOP 		= "1830";
+	std::string PAUSE		= "1832";
+	std::string STARTSTOP 	= "1833";
+	std::string PLAY		= "1834";
+	std::string REW			= "1836";
+	std::string FWD			= "1838";
+	std::string PHOTOCAPTURE= "1839";
+	std::string RECORD		= "183A";
+	std::string EXECUTE		= "18A2";
+	//Menu
+	std::string MENU		= "189A";
+	std::string MENUUP		= "1884";
+	std::string MENUDOWN	= "1886";
+	std::string MENURIGHT	= "18C2";
+	std::string MENULEFT	= "18C4";
+	//Variable speed zoom Tele
+	std::string TELE0		= "2800";
+	std::string TELE1		= "2802";
+	std::string TELE2		= "2804";
+	std::string TELE3		= "2806";
+	std::string TELE4		= "2808";
+	std::string TELE5		= "280A";
+	std::string TELE6		= "280C";
+	std::string TELE7		= "280E";
+	//Variable speed zoom Wide
+	std::string WIDE0		= "2810";
+	std::string WIDE1		= "2812";
+	std::string WIDE2		= "2814";
+	std::string WIDE3		= "2816";
+	std::string WIDE4		= "2818";
+	std::string WIDE5		= "281A";
+	std::string WIDE6		= "281C";
+	std::string WIDE7		= "281E";
+};
+
+
 class camera {
 	elm624* elm;
 public:
@@ -25,36 +69,12 @@ public:
 	void getStatus(cameraStatus* status) {status = this->status;};
 	int setStatus(cameraStatus* status);
 private:
-	int Write(std::string str);
-	std::string zoom(std::string cmd);
-
 	std::string model;
 	std::string xmlfile;
+	cameraCommands_t commands;
 
-	std::string PLAY;
-	std::string STOP;
-	std::string RECORD;
-	std::string PAUSE;
-	std::string REW;
-	std::string FWD;
-
-	std::string TELE0;
-	std::string TELE1;
-	std::string TELE2;
-	std::string TELE3;
-	std::string TELE4;
-	std::string TELE5;
-	std::string TELE6;
-	std::string TELE7;
-
-	std::string WIDE0;
-	std::string WIDE1;
-	std::string WIDE2;
-	std::string WIDE3;
-	std::string WIDE4;
-	std::string WIDE5;
-	std::string WIDE6;
-	std::string WIDE7;
+	int Write(std::string str);
+	std::string zoom(std::string cmd);
 };
 
 
