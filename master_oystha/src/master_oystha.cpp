@@ -90,7 +90,10 @@ void commandUpdate(void* file) {
 					} else if(strcmp(cmd, "EXIT") == 0) {
 						elm->writeString("EXIT");
 						close(handler);
-												//cout << "----------------Thread commandUpdate end------------------" << endl;
+						if(inotify_rm_watch(fd, wd) < 0) {
+							error(EXIT_FAILURE, errno, "failed to remove inotify watch '%s'", path);
+						}
+						//cout << "----------------Thread commandUpdate end------------------" << endl;
 						pthread_exit(NULL);
 					} else {
 						cerr << "commandoUpdate WARNING: Unknown command: '" << cmd << "'." << endl;
@@ -124,10 +127,13 @@ void cameraUpdate(void* elm) {
 			pelm->setReady(true);
 			break;
 		case 10:
-			//status message
-			if(cam->status->LancToPlain(Buffer)) {
+			//status message received, SYNC OK
+			if(!pelm->getSync()) {
+				pelm->setSync(true);
+			}
+			if(cam->LancToPlain(Buffer)) {
 				//status change, UPDATE
-				status = cam->status->getStatusString();
+				status = cam->getStatusString();
 				writeStatusToDB(con, options.SQL.table, status);
 			}
 			break;
@@ -140,6 +146,7 @@ void cameraUpdate(void* elm) {
 					pelm->setSync(true);
 				} else if(strcmp(Buffer, "NO SYNC") == 0){
 					pelm->setSync(false);
+					cerr << "NO SYNC" << endl;
 				} else if(strncmp(Buffer, "ELM", 3) == 0){
 					pelm->setID(Buffer);
 				} else {
@@ -216,6 +223,9 @@ int main(int argc, const char **argv){
 	if(printValues.elm) {
 		elm->printCommandValues();
 	}
+	//set default values
+	elm->writeString("ATD");
+	sleep(1);
 
 	thread readUser (commandUpdate, (void*)options.cmdfile.c_str());
 	thread readCam	(cameraUpdate, (void*)elm);

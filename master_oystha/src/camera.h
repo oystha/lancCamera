@@ -59,15 +59,17 @@ struct cameraCommands_t {
 
 class camera {
 	elm624* elm;
-public:
 	cameraStatus* status;
+public:
 	camera(std::string model, std::string xmlfile, elm624* elm);
 	~camera();
-	int setCommands();
+	int setCommandValues();
 	void printCommandValues();
 	int writeCommand(std::string cmd);
-	void getStatus(cameraStatus* status) {status = this->status;};
-	int setStatus(cameraStatus* status);
+	bool LancToPlain(char* Buffer);
+	std::string getStatusString() {return status->getStatusString();};
+	//void getStatus(cameraStatus* status) {status = this->status;};
+	//int setStatus(cameraStatus* status);
 private:
 	std::string model;
 	std::string xmlfile;

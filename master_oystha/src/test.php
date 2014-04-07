@@ -58,6 +58,7 @@ if(isset($_GET['cmd'])){
 		<button type="button" onclick="location.href='test.php?cmd=cam_menuRight'">RIGHT</button>
 		<button type="button" onclick="location.href='test.php?cmd=cam_menuLeft'">LEFT</button>
 		<button type="button" onclick="location.href='test.php?cmd=cam_execute'">ENTER</button>
+		<button type="button" onclick="location.href='test.php?cmd=cam_photoCapture'">PHOTO</button>
 	<div>
 </div>
 </body>

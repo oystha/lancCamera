@@ -1,5 +1,5 @@
 <!--
-Tag names are equal to valid commands.
+To use command type cam_tagname. E.g cam_stop.
 If a command from the default camera is not implemented on the used camera set value to NULL.
 Commands for the chip MUST begin with AT, all other commands are forwarded to the camera.
 Write to chip by commands like e.g. elm_checkSync.

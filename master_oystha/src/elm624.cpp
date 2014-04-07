@@ -181,9 +181,7 @@ int elm624::Write(const void *Buffer, int Length) {
 		ret = -1;
 	}
 	ret = writeBump();
-	mut_ready.lock();
-	ready = false;
-	mut_ready.unlock();
+	setReady(false);
 	return ret;
 }
 /*
